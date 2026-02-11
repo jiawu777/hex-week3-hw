@@ -144,7 +144,7 @@ useEffect(() => {
                 setProductData({ // 重設資料
                 title: "", category: "", origin_price: 0, price: 0,
                 unit: "", description: "", content: "", is_enabled: 0,
-                imageUrl: defaultImageUrl, imagesUrl: []
+                imageUrl: null, imagesUrl: []
               });
               productModalRef.current.show();
               }}>建立新的產品</button>
