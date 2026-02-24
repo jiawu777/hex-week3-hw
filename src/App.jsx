@@ -10,7 +10,6 @@ const API_PATH = VITE_API_PATH;
 function App() {
   const defaultImageUrl="https://storage.googleapis.com/vue-course-api.appspot.com/jia-hex/1770819402945.jpg";
   const INITIAL_PRODUCT_DATA = { 
-      "name": "",
       "title": "",
       "category": "",
       "origin_price": 0,
@@ -30,8 +29,10 @@ function App() {
   const [templateProduct,setTemplateProduct] = useState(INITIAL_PRODUCT_DATA);
   const productModalRef = useRef(null);
   const [modalType,setModalType] = useState("");
-  const [productData,setProductData] = useState({});
+  const [errors,setErrors] = useState({});
+
   
+
 
 
   const getProducts = async () => {
@@ -39,7 +40,8 @@ function App() {
       const response = await axios.get(`${API_BASE}/api/${API_PATH}/admin/products`);
       setProducts(response.data.products);
     } catch (err) {
-      console.log(err.response.data.message);
+      alert("獲取商品列表失敗: " + err.response.data.message);
+      
   }}
 
   const checkAdmin = async () => {
@@ -47,7 +49,7 @@ function App() {
       await axios.post(`${API_BASE}/api/user/check`);
       setIsAuth(true);
     } catch (err) {
-      console.log(err.response.data.message);
+      alert("驗證失敗: " + err.response.data.message);
     }
   };
 
@@ -66,6 +68,13 @@ function App() {
       //id需判別為Number、checkbox或文字，以符合API需求
       [name]: type === "checkbox" ? checked : value,
     }));
+
+    if(errors[name]){
+      setErrors((prevErrors)=>({
+        ...prevErrors,
+        [name]: ""
+      }))
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -98,6 +107,41 @@ function App() {
         imagesUrl: templateProduct.imagesUrl.filter((url)=>url.trim()!=="") //過濾掉空字串的圖片網址
       }
     }
+    const newErrors = {};
+
+    const validateForm = (productData) => {
+    if (!productData.title.trim()) {
+      newErrors.title = "商品名稱不可為空";
+    }
+    if (!productData.category.trim()) {
+      newErrors.category = "商品分類不可為空";
+    }
+    if (productData.origin_price <= 0) {
+      newErrors.origin_price = "原價必須大於0";
+    }
+    if (productData.price <= 0) {
+      newErrors.price = "售價必須大於0";
+    }
+    if (!productData.unit.trim()) {
+      newErrors.unit = "單位不可為空";
+    }
+    if(productData.imagesUrl.length === 0) {
+      newErrors.imagesUrl = "圖片不可為空";
+    }
+    if(productData.description.trim() === "") {
+      newErrors.description = "產品描述不可為空";
+    }
+    if(productData.content.trim() === "") {
+      newErrors.content = "說明內容不可為空";
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+    if (!validateForm(productData.data)) {
+      alert("表單驗證失敗: \n" + Object.values(newErrors).join("\n"));
+      return;
+    }
 
     try{
       await axios[method](url,productData);
@@ -106,9 +150,10 @@ function App() {
       }else{
         alert(`${templateProduct.title}更新成功`);
       }
+      closeModal();
       await getProducts();
     }catch(err){
-      console.log(err.response.data.message);
+      alert(`${modalType==="create"? "新增商品失敗: " : "更新商品失敗: "}${err.response.data.message}`);
     }
   }
 
@@ -118,7 +163,7 @@ function App() {
       alert("刪除成功");
       await getProducts();
     } catch (err) {
-      console.log(err.response.data.message);
+      alert("刪除商品失敗: " + err.response.data.message);
     }
   }
 
@@ -126,6 +171,10 @@ function App() {
     const newImagesUrl = [...templateProduct.imagesUrl];
     newImagesUrl.unshift(templateProduct.imageUrl);
     setTemplateProduct({...templateProduct, imagesUrl: newImagesUrl, imageUrl: ""})
+    setErrors((prevErrors)=>({
+      ...prevErrors,
+      imagesUrl: ""
+    }))
   }
 
   const handleImageChange=(e,index)=>{
@@ -162,12 +211,15 @@ useEffect(() => {
       keyboard: false
     });
     
-  //   document.querySelector('#productModal').addEventListener('hidden.bs.modal', function () {
-  //    if(document.activeElement instanceof HTMLElement){
-  //     document.activeElement.blur();
-  //    }
-  //   }
-  // )
+    // Modal 關閉時移除焦點
+    document
+          .querySelector("#productModal")
+          .addEventListener("hide.bs.modal", () => {
+            if (document.activeElement instanceof HTMLElement) {
+              document.activeElement.blur();
+            }
+          });
+    
     checkAdmin();
     
   }, []);
@@ -289,7 +341,7 @@ useEffect(() => {
         className="modal fade"
         tabIndex="-1"
         aria-labelledby="productModalLabel"
-        aria-hidden="true"
+        // aria-hidden="true"
         ref={productModalRef}
         >
           <div className="modal-dialog modal-xl">
@@ -324,19 +376,17 @@ useEffect(() => {
                           id="imageUrl"
                           name="imageUrl"
                           type="text"
-                          className="form-control"
+                          className={`form-control ${errors.imagesUrl ? "is-invalid" : ""}`}
                           placeholder="請輸入圖片連結"
+                          value={templateProduct.imageUrl}
                           onChange={handleModalInputChange}
-                          value=""
-                          required
-                          autoFocus
                           />
                       </div>
                         <img className="img-fluid rounded" src={templateProduct.imageUrl || defaultImageUrl} alt="無法取得商品圖片" />
                     </div>
                   
                     <div>
-                      <button className="btn btn-outline-primary btn-sm d-block w-100" 
+                      <button className="btn btn-outline-primary btn-sm d-block w-100" type="button" disabled={!templateProduct.imageUrl.trim()}
                       onClick={()=>{
                         handleImageCreate()
                       }}>
@@ -355,8 +405,6 @@ useEffect(() => {
                                 placeholder="請輸入圖片連結"
                                 value={url}
                                 onChange={(e)=>handleImageChange(e,index)}
-                                required
-                                autoFocus
                                 />
                             </div>
 
@@ -381,12 +429,10 @@ useEffect(() => {
                         id="title"
                         name="title"
                         type="text"
-                        className="form-control"
+                        className={`form-control ${errors.title ? "is-invalid" : ""}`}
                         placeholder="請輸入標題"
                         value={templateProduct.title}
-                      onChange={handleModalInputChange}
-                      required
-                      autoFocus
+                        onChange={handleModalInputChange}
                         />
                     </div>
 
@@ -397,12 +443,11 @@ useEffect(() => {
                           id="category"
                           name="category"
                           type="text"
-                          className="form-control"
+                          className={`form-control ${errors.category ? "is-invalid" : ""}`}
                           placeholder="請輸入分類"
                           value={templateProduct.category}
                       onChange={handleModalInputChange}
-                      required
-                      autoFocus
+                      
                           />
                       </div>
                       <div className="mb-3 col-md-6">
@@ -410,12 +455,11 @@ useEffect(() => {
                         <input
                           name="unit"
                           type="text"
-                          className="form-control"
+                          className={`form-control ${errors.unit ? "is-invalid" : ""}`}
                           placeholder="請輸入單位"
                           value={templateProduct.unit}
-                      onChange={handleModalInputChange}
-                      required
-                      autoFocus
+                          onChange={handleModalInputChange}
+                          
                           />
                       </div>
                     </div>
@@ -428,12 +472,11 @@ useEffect(() => {
                           name="origin_price"
                           type="number"
                           min="0"
-                          className="form-control"
+                          className={`form-control ${errors.origin_price ? "is-invalid" : ""}`}
                           placeholder="請輸入原價"
                           value={templateProduct.origin_price}
-                      onChange={handleModalInputChange}
-                      required
-                      autoFocus
+                          onChange={handleModalInputChange}
+                          
                           />
                       </div>
                       <div className="mb-3 col-md-6">
@@ -443,12 +486,11 @@ useEffect(() => {
                           name="price"
                           type="number"
                           min="0"
-                          className="form-control"
+                          className={`form-control ${errors.price ? "is-invalid" : ""}`}
                           placeholder="請輸入售價"
                           value={templateProduct.price}
-                      onChange={handleModalInputChange}
-                      required
-                      autoFocus
+                          onChange={handleModalInputChange}
+                          
                           />
                       </div>
                     </div>
@@ -459,12 +501,11 @@ useEffect(() => {
                       <textarea
                         id="description"
                         name="description"
-                        className="form-control"
+                        className={`form-control ${errors.description ? "is-invalid" : ""}`}
                         placeholder="請輸入產品描述"
                         value={templateProduct.description}
-                      onChange={handleModalInputChange}
-                      required
-                      autoFocus
+                        onChange={handleModalInputChange}
+                        
                         ></textarea>
                     </div>
                     <div className="mb-3">
@@ -472,12 +513,11 @@ useEffect(() => {
                       <textarea
                         id="content"
                         name="content"
-                        className="form-control"
+                        className={`form-control ${errors.content ? "is-invalid" : ""}`}
                         placeholder="請輸入說明內容"
                         value={templateProduct.content}
-                      onChange={handleModalInputChange}
-                      required
-                      autoFocus
+                        onChange={handleModalInputChange}
+                        
                         ></textarea>
                     </div>
                     <div className="mb-3">
@@ -488,9 +528,8 @@ useEffect(() => {
                           className="form-check-input"
                           type="checkbox"
                           checked={templateProduct.is_enabled}
-                      onChange={handleModalInputChange}
-                      required
-                      autoFocus
+                          onChange={handleModalInputChange}
+                          
                           />
                         <label className="form-check-label" htmlFor="is_enabled">
                           是否啟用
@@ -511,7 +550,7 @@ useEffect(() => {
                 </button>
                 <button type="button" className={`btn btn-${modalType==="delete"?"danger":"primary"}`} 
                 //確認按鈕會根據updateProductIdRef是否有值來判斷是要呼叫新增或更新的API
-                onClick={()=>{ modalType==="delete"?deleteProduct(templateProduct.id):updateProduct(templateProduct.id); closeModal();}}
+                onClick={()=>{ modalType==="delete"?deleteProduct(templateProduct.id):updateProduct(templateProduct.id)}}
                 // data-bs-dismiss="modal"
                 >{modalType==="delete"?"確認刪除":"確認"}</button>
               </div>
