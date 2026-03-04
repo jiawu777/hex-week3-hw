@@ -108,40 +108,63 @@ function App() {
       }
     }
     const newErrors = {};
+    const requiredFields = {
+      title: "商品名稱", 
+      category: "商品分類", 
+      origin_price: "原價", 
+      price: "售價", 
+      unit: "單位", 
+      description: "產品描述", 
+      content: "說明內容"
+    };
 
-    const validateForm = (productData) => {
-    if (!productData.title.trim()) {
-      newErrors.title = "商品名稱不可為空";
-    }
-    if (!productData.category.trim()) {
-      newErrors.category = "商品分類不可為空";
-    }
-    if (productData.origin_price <= 0) {
-      newErrors.origin_price = "原價必須大於0";
-    }
-    if (productData.price <= 0) {
-      newErrors.price = "售價必須大於0";
-    }
-    if (!productData.unit.trim()) {
-      newErrors.unit = "單位不可為空";
-    }
-    if(productData.imagesUrl.length === 0) {
-      newErrors.imagesUrl = "圖片不可為空";
-    }
-    if(productData.description.trim() === "") {
-      newErrors.description = "產品描述不可為空";
-    }
-    if(productData.content.trim() === "") {
-      newErrors.content = "說明內容不可為空";
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+    Object.keys(requiredFields).forEach((field)=> {
+      const value = productData.data[field];
+      if (value=== undefined || value === null || (typeof value === "string" && value.trim() === "") || (Array.isArray(value) && value.length === 0)) {
+        newErrors[field] = `${requiredFields[field]}不可為空`;
+      }
+    })
 
-    if (!validateForm(productData.data)) {
-      alert("表單驗證失敗: \n" + Object.values(newErrors).join("\n"));
-      return;
-    }
+
+if(Object.keys(newErrors).length > 0) {
+  setErrors(newErrors);
+  alert("表單驗證失敗: \n" + Object.values(newErrors).join("\n"));
+  return;
+}
+  //   const validateForm = (productData) => {
+  //   if (!productData.title.trim()) {
+  //     newErrors.title = "商品名稱不可為空";
+  //   }
+  //   if (!productData.category.trim()) {
+  //     newErrors.category = "商品分類不可為空";
+  //   }
+  //   if (productData.origin_price <= 0) {
+  //     newErrors.origin_price = "原價必須大於0";
+  //   }
+  //   if (productData.price <= 0) {
+  //     newErrors.price = "售價必須大於0";
+  //   }
+  //   if (!productData.unit.trim()) {
+  //     newErrors.unit = "單位不可為空";
+  //   }
+  //   if(productData.imagesUrl.length === 0) {
+  //     newErrors.imagesUrl = "圖片不可為空";
+  //   }
+  //   if(productData.description.trim() === "") {
+  //     newErrors.description = "產品描述不可為空";
+  //   }
+  //   if(productData.content.trim() === "") {
+  //     newErrors.content = "說明內容不可為空";
+  //   }
+  //   setErrors(newErrors);
+  //   return Object.keys(newErrors).length === 0;
+  // };
+
+    // if (!validateForm(productData.data)) {
+    //   alert("表單驗證失敗: \n" + Object.values(newErrors).join("\n"));
+    //   return;
+    // }
+
 
     try{
       await axios[method](url,productData);
